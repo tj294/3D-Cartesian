@@ -1,5 +1,5 @@
 """
-A Dedalus v3 script for running 2.5D numerical simulations of in a Cartesian box. This script
+A Dedalus v3 script for running 3D numerical simulations of in a Cartesian box. This script
 allows for an internal heating function, such as in Currie et al. 2020.
 To Do:
 
@@ -26,6 +26,7 @@ Options:
     --top=TOP                       # Top boundary condition [default: insulating]
     --bottom=BOTTOM                 # Bottom boundary condition [default: insulating]
     --snaps=<snaps>                 # Snapshot interval [default: 500]
+    --slices=<slices>               # Slice interval [default: 250]
     --horiz=<horiz>                 # Horizontal analysis interval [default: 100]
     --scalar=<scalar>               # Scalar analysis interval [default: 1]
     -o OUT_PATH, --output OUT_PATH  # output file [default: DATA/output/]
@@ -469,7 +470,7 @@ if not args["--test"]:
         run_file.write(run_params)
 
     # ====================
-    #   2.5D DATA FIELD
+    #     3D DATA FIELD
     # ====================
     snapshots = solver.evaluator.add_file_handler(
         outpath + "snapshots",
@@ -479,6 +480,25 @@ if not args["--test"]:
         parallel=parallel,
     )
     snapshots.add_tasks(solver.state, layout="g")
+    # ==================
+    #       SLICES
+    # ==================
+    slices = solver.evaluator.add_file_handler(
+        outpath + "slices",
+        iter=slices_iter,
+        max_writes=5000,
+        mode=fh_mode,
+        parallel=parallel,
+    )
+    slices.add_task(Temp(x=0), name="T(x=0)", layout="g")
+    slices.add_task(u(x=0), name="u(x=0)", layout="g")
+    slices.add_task(Temp(x=0.5 * Ly), name="T(x=0.5)", layout="g")
+    slices.add_task(u(x=0.5 * Ly), name="u(x=0.5)", layout="g")
+    slices.add_task(Temp(z=Ly), name="T(x=1)", layout="g")
+    slices.add_task(u(z=Ly), name="u(x=1)", layout="g")
+    slices.add_task(Temp(z=Lz / 2), name="T(z=0.5)", layout="g")
+    slices.add_task(u(z=Lz / 2), name="u(z=0.5)", layout="g")
+
     # ==================
     #   HORIZONTAL AVE
     # ==================
@@ -490,13 +510,17 @@ if not args["--test"]:
         parallel=parallel,
     )
     horiz_aves.add_task(
-        d3.Integrate(d3.Integrate(Temp, "x"), "y") / Ly, name="<T>", layout="g"
+        d3.Integrate(d3.Integrate(Temp, "x"), "y") / (Ly * Ly), name="<T>", layout="g"
     )
     horiz_aves.add_task(
-        d3.Integrate(d3.Integrate(f_cond, "x"), "y") / Ly, name="<F_cond>", layout="g"
+        d3.Integrate(d3.Integrate(f_cond, "x"), "y") / (Ly * Ly),
+        name="<F_cond>",
+        layout="g",
     )
     horiz_aves.add_task(
-        d3.Integrate(d3.Integrate(f_conv, "x"), "y") / Ly, name="<F_conv>", layout="g"
+        d3.Integrate(d3.Integrate(f_conv, "x"), "y") / (Ly * Ly),
+        name="<F_conv>",
+        layout="g",
     )
 
     # ==================
@@ -505,33 +529,35 @@ if not args["--test"]:
     scalars = solver.evaluator.add_file_handler(
         outpath + "scalars",
         iter=scalar_iter,
-        max_writes=2500,
+        max_writes=5000,
         mode=fh_mode,
         parallel=parallel,
     )
     scalars.add_task(
         d3.Integrate(d3.Integrate(d3.Integrate(0.5 * u @ u, "y"), "z"), "x")
-        / (Lz * Ly),
+        / (Lz * Ly * Ly),
         name="KE",
         layout="g",
     )
     scalars.add_task(
         d3.Integrate(d3.Integrate(d3.Integrate(np.sqrt(u @ u), "x"), "y"), "z")
-        / (Lz * Ly),
+        / (Lz * Ly * Ly),
         name="Re",
         layout="g",
     )
     scalars.add_task(
-        d3.Integrate(d3.Integrate(Temp(z=0), "y"), "x") / Ly, name="<T(0)>", layout="g"
+        d3.Integrate(d3.Integrate(Temp(z=0), "y"), "x") / (Ly * Ly),
+        name="<T(0)>",
+        layout="g",
     )
     scalars.add_task(
-        d3.Integrate(d3.Integrate(d3.Integrate(Temp, "x"), "y"), "z") / (Ly * Lz),
+        d3.Integrate(d3.Integrate(d3.Integrate(Temp, "x"), "y"), "z") / (Ly * Ly * Lz),
         name="<<T>>",
         layout="g",
     )
     scalars.add_task(
         d3.Integrate(d3.Integrate(d3.Integrate(f_cond + f_conv, "x"), "y"), "z")
-        / (Ly * Lz),
+        / (Ly * Ly * Lz),
         name="F_tot",
         layout="g",
     )
