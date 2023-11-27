@@ -113,6 +113,8 @@ logger.info(f"Ro_c = {np.sqrt(Ra / (Pr * Ta)):1.2e}")
 
 # snapshot_iter = argcheck(args["--snaps"], rp.snapshot_iter, type=int)
 snapshot_iter = int(args["--snaps"])
+# slices_iter = argcheck(args["--slices"], rp.slices_iter, type=int)
+slices_iter = int(args["--slices"])
 # horiz_iter = argcheck(args["--horiz"], rp.horiz_iter, type=int)
 horiz_iter = int(args["--horiz"])
 # scalar_iter = argcheck(args["--scalar"], rp.scalar_iter, type=int)
@@ -461,6 +463,7 @@ if not args["--test"]:
         "F": F,
         "max_timestep": max_timestep,
         "snapshot_iter": snapshot_iter,
+        "slices_iter": slices_iter,
         "horiz_iter": horiz_iter,
         "scalar_iter": scalar_iter,
     }
