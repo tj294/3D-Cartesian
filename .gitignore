@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 
 DATA/
+*.sh
+logs/
+errors/
 
 # C extensions
 *.so
