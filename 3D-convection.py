@@ -21,7 +21,7 @@ Options:
     --stop=<stop>                   # Simulation stop time [default: 1.0]
     --currie                        # Run with Currie 2020 heating function
     --kazemi                        # Run with Kazemi 2022 heating function
-    --ff                            # Use fixed-flux boundary conditions
+    --Hwidth=<Hwidth>               # Width of the heating zone [default: 0.2]
     --slip=SLIP                     # Boundary conditions No/Free [default: free]
     --top=TOP                       # Top boundary condition [default: insulating]
     --bottom=BOTTOM                 # Bottom boundary condition [default: insulating]
@@ -48,8 +48,6 @@ from mpi4py import MPI
 
 ncpu = MPI.COMM_WORLD.size
 
-# import rb_params as rp
-import heating_params as hp
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +198,7 @@ f_cond = -d3.Differentiate(Temp, coords["z"])
 f_conv = u_z * Temp
 g_operator = d3.grad(u) - z_hat * lift(tau_u1)
 h_operator = d3.grad(Temp) - z_hat * lift(tau_T3)
-F = hp.F
+F = 1
 
 # Add coriolis term
 Tah = np.sqrt(Ta)
@@ -220,7 +218,8 @@ omega["g"][2] = np.cos(theta)
 # #? =================
 # Following Currie et al. 2020 Set-up B
 # Width of middle 'convection zone' with no heating/cooling
-heating_width = hp.heating_width
+heating_width = float(args["--Hwidth"])
+
 H = convection_height = Lz / (1 + 2 * heating_width)
 # Width of heating and cooling layers
 Delta = heating_width * H
