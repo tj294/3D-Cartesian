@@ -36,6 +36,7 @@ Options:
     -k, --kill                      # Kills the program after building the solver.
     -f, --function                  # Plots the heating function
 """
+
 import numpy as np
 import dedalus.public as d3
 import logging
@@ -141,7 +142,7 @@ parallel = None
 # ====================
 dealias = 3 / 2
 dtype = np.float64
-timestepper = d3.RK443
+timestepper = d3.SBDF2  # Change timestepper from RK443 to lower memory usage
 
 # stop_sim_time = argcheck(args["--stop"], rp.stop_sim_time, type=float)
 stop_sim_time = float(args["--stop"])
