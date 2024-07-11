@@ -386,20 +386,21 @@ else:
     # Temp.high_pass_filter(scales=0.125)
     if args["--kazemi"]:
         logger.info("Using Kazemi Temp IC")
-        Temp["g"] *= z * (Lz - z) #? More noise in middle, less at top&bottom
+        Temp["g"] *= z * (Lz - z)  # ? More noise in middle, less at top&bottom
         Temp["g"] += (
-            a*l*l * (np.exp(-Lz / l) - np.exp(-z / l))
+            a * l * l * (np.exp(-Lz / l) - np.exp(-z / l))
             + 0.5 * beta * (z * z - Lz * Lz)
             + a * l * (Lz - z)
-        ) #? T_eq for Kazemi exponential heat function
+        )  # ? T_eq for Kazemi exponential heat function
     elif args["--currie"]:
         logger.info("Using Currie Temp IC")
-        Temp["g"] *= z * (Lz - z) #? More noise in middle, less at top&bottom
+        Temp["g"] *= z * (Lz - z)  # ? More noise in middle, less at top&bottom
         low_temp = lambda z: F * (
             (Delta / (4 * np.pi * np.pi))
             * (1 + np.cos((2 * np.pi / Delta) * (z - (Delta / 2))))
             - z * z / (2 * Delta)
-            + Lz - Delta
+            + Lz
+            - Delta
         )
         mid_temp = lambda z: F * (-z + Lz - Delta / 2)
         high_temp = lambda z: F * (
@@ -410,13 +411,13 @@ else:
         )
         Temp["g"] += np.piecewise(
             z,
-            [z <= Delta, z >= Lz - Delta], 
+            [z <= Delta, z >= Lz - Delta],
             [low_temp, high_temp, mid_temp],
         )
     else:
         logger.info("Using Boundary Temp IC")
-        Temp["g"] *= z * (Lz - z) #? More noise in middle, and less at top&bottom
-        Temp["g"] += Lz - z #? T_conductive for boundary driven convection
+        Temp["g"] *= z * (Lz - z)  # ? More noise in middle, and less at top&bottom
+        Temp["g"] += Lz - z  # ? T_conductive for boundary driven convection
 
     first_iter = 0
     dt = max_timestep
@@ -450,7 +451,6 @@ if not args["--test"]:
             today = datetime.today().strftime("%Y-%m_%d %H:%M:%S\n\t")
             file.write(today)
             file.write("python3 " + " ".join(argv) + "\n")
-
 
     # ====================
     #     3D DATA FIELD
@@ -547,8 +547,9 @@ if not args["--test"]:
     scalars.add_task(
         d3.Integrate(d3.Integrate(d3.Integrate(Temp * heat, "x"), "y"), "z")
         / (Ly * Ly * Lz)
-        - d3.Average(d3.Average(Temp(z=Lz), "x"), "y") 
-        / (Ly * Ly), name="<gradT^2>", layout="g"
+        - d3.Average(d3.Average(Temp(z=Lz), "x"), "y") / (Ly * Ly),
+        name="<gradT^2>",
+        layout="g",
     )
 
     # analysis = solver.evaluator.add_file_handler(
