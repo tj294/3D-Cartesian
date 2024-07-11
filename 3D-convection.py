@@ -10,9 +10,9 @@ Usage:
 Options:
     --Ra=<Ra>                       # Rayleigh number
     --Pr=<Pr>                       # Prandtl number [default: 1]
-    --Ta=<Ta>                       # Taylor number
-    --theta=<theta>                 # co-latitude of box to rotation vector [default: 45]
-    --Ly=<Ly>                       # Aspect Ratio of the box [default: 1]
+    --Ta=<Ta>                       # Taylor number [default: 1e4]
+    --theta=<theta>                 # co-latitude of box to rotation vector [default: 5]
+    --Ly=<Ly>                       # Aspect Ratio of the box [default: 4]
     --Lz=<Lz>                       # Depth of the box [default: 1]
     --Ny=<Ny>                       # Horizontal resolution [default: 128]
     --Nz=<Nz>                       # Vertical resolution [default: 256]
@@ -45,6 +45,8 @@ import pathlib
 from glob import glob
 from docopt import docopt
 import json
+from datetime import datetime
+from sys import argv
 from mpi4py import MPI
 
 ncpu = MPI.COMM_WORLD.size
@@ -86,37 +88,30 @@ if not (args["--test"]):
 if args["--input"]:
     restart_path = os.path.normpath(args["--input"]) + "/"
     logger.info("Reading from {}".format(restart_path))
-
-Ly = int(args["--Ly"])
-Lz = int(args["--Lz"])
-if args["--input"]:
     with open(restart_path + "run_params/runparams.json", "r") as f:
         inparams = json.load(f)
     Ny = inparams["Ny"]
     Nz = inparams["Nz"]
+    Ly = inparams["Ly"]
+    Lz = inparams["Lz"]
 else:
+    Ly = float(args["--Ly"])
+    Lz = float(args["--Lz"])
+    Ny = int(args["--Ny"])
     Nz = int(args["--Nz"])
-    if args["--Ny"]:
-        Ny = int(args["--Ny"])
-    else:
-        Ny = 2 * Nz
 
-# Ra = argcheck(args["--Ra"], rp.Ra)
-Ra = float(args["--Ra"])
-# Pr = argcheck(args["--Pr"], rp.Pr)
+try:
+    Ra = float(args["--Ra"])
+except ValueError:
+    print("Must provide a valid Ra value")
 Pr = float(args["--Pr"])
-# Ta = argcheck(args["--Ta"], rp.Ta)
 Ta = float(args["--Ta"])
 
 logger.info(f"Ro_c = {np.sqrt(Ra / (Pr * Ta)):1.2e}")
 
-# snapshot_iter = argcheck(args["--snaps"], rp.snapshot_iter, type=int)
 snapshot_iter = int(args["--snaps"])
-# slices_iter = argcheck(args["--slices"], rp.slices_iter, type=int)
 slices_iter = int(args["--slices"])
-# horiz_iter = argcheck(args["--horiz"], rp.horiz_iter, type=int)
 horiz_iter = int(args["--horiz"])
-# scalar_iter = argcheck(args["--scalar"], rp.scalar_iter, type=int)
 scalar_iter = int(args["--scalar"])
 
 if args["--kazemi"]:
@@ -146,10 +141,9 @@ timestepper = d3.SBDF2  # Change timestepper from RK443 to lower memory usage
 
 # stop_sim_time = argcheck(args["--stop"], rp.stop_sim_time, type=float)
 stop_sim_time = float(args["--stop"])
-# stop_wall_time = rp.stop_wall_time
-# stop_iteration = rp.end_iteration
+stop_wall_time = np.inf
+stop_iteration = np.inf
 
-# max_timestep = argcheck(args["--maxdt"], rp.max_timestep, type=float)
 max_timestep = float(args["--maxdt"])
 logger.info(f"max_timestep = {max_timestep}")
 
@@ -221,7 +215,7 @@ omega["g"][2] = np.cos(theta)
 # Width of middle 'convection zone' with no heating/cooling
 heating_width = float(args["--Hwidth"])
 
-H = convection_height = Lz / (1 + 2 * heating_width)
+H = Lz / (1 + 2 * heating_width)
 # Width of heating and cooling layers
 Delta = heating_width * H
 
@@ -311,51 +305,6 @@ else:
     )
 
 # ? === Driving Boundary Conditions ===
-#! === Boundary Driven ===
-# * === RB1 (Temp gradient)===
-# # T=0 at top, T=1 at bottom
-# problem.add_equation("Temp(z=0) = 1")
-# problem.add_equation("Temp(z=Lz) = 0")
-
-# * === RB2 (fixed flux) ===
-# # Goluskin 2015
-# problem.add_equation('Tz(z=0) = -F')
-# problem.add_equation('Tz(z=Lz) = -F')
-
-# *=== RB3 ===*
-# # Fixed F at bottom, T=0 at top
-# problem.add_equation('Tz(z=0) = -F')
-# problem.add_equation('Temp(z=Lz) = 0')
-
-#! === Internally Heated ===
-# * === IH1 (T=0) ===
-# # T=0 at top and bottom (Goluskin & van der Poel 2016)
-# problem.add_equation('Temp(z=0) = 0')
-# problem.add_equation('Temp(z=Lz) = 0')
-
-# * === IH2 ===
-# # Insulating bottom, fixed flux top
-# problem.add_equation('Tz(z=0) = 0')
-# problem.add_equation('Tz(z=Lz) = -F')
-# if args["--currie"] or args["--kazemi"]:
-#     if args["--ff"]:
-#         # Insulating Top and Bottom
-#         problem.add_equation("Tz(z=0) = 0")
-#         problem.add_equation("Tz(z=Lz) = 0")
-#     else:
-#         # * === IH3 ===
-#         # # Kazemi et al. 2022
-#         # # Insulating bottom, T=0 top
-#         problem.add_equation("Tz(z=0) = 0")
-#         problem.add_equation("Temp(z=Lz) = 0")
-# else:
-#     if args["--ff"]:
-#         problem.add_equation("Tz(z=0) = -F")
-#         problem.add_equation("Tz(z=Lz) = 0")
-#     else:
-#         problem.add_equation("Tz(z=0) = -F")
-#         problem.add_equation("Temp(z=Lz) = 0")
-
 if args["--top"] == "insulating":
     problem.add_equation("Tz(z=Lz) = 0")
     boundary_conditions = "Insulating top"
@@ -383,13 +332,6 @@ else:
     raise ValueError(
         f'Invalid bottom boundary condition {args["--bottom"]}, must be "insulating", "vanishing" or "fixed_flux"'
     )
-
-
-#! === Other ===
-# * === Currie et al. 2020 ===
-# # Fixed temp bottom, insulating top:
-# problem.add_equation("Temp(z=0) = 0")
-# problem.add_equation("Tz(z=Lz) = 0")
 
 # ? === Velocity Boundary Conditions ===
 # * === Stress-Free ===
@@ -442,8 +384,39 @@ else:
     Temp.fill_random("g", seed=42, distribution="normal", scale=1e-5)
     # Temp.low_pass_filter(scales=0.25)
     # Temp.high_pass_filter(scales=0.125)
-    Temp["g"] *= z * (Lz - z)
-    Temp["g"] += Lz - z
+    if args["--kazemi"]:
+        logger.info("Using Kazemi Temp IC")
+        Temp["g"] *= z * (Lz - z) #? More noise in middle, less at top&bottom
+        Temp["g"] += (
+            a*l*l * (np.exp(-Lz / l) - np.exp(-z / l))
+            + 0.5 * beta * (z * z - Lz * Lz)
+            + a * l * (Lz - z)
+        ) #? T_eq for Kazemi exponential heat function
+    elif args["--currie"]:
+        logger.info("Using Currie Temp IC")
+        Temp["g"] *= z * (Lz - z) #? More noise in middle, less at top&bottom
+        low_temp = lambda z: F * (
+            (Delta / (4 * np.pi * np.pi))
+            * (1 + np.cos((2 * np.pi / Delta) * (z - (Delta / 2))))
+            - z * z / (2 * Delta)
+            + Lz - Delta
+        )
+        mid_temp = lambda z: F * (-z + Lz - Delta / 2)
+        high_temp = lambda z: F * (
+            -Delta
+            / (4 * np.pi * np.pi)
+            * (1 + np.cos((2 * np.pi / Delta) * (z - Lz + Delta / 2)))
+            + 1 / (2 * Delta) * (z * z - 2 * Lz * z + Lz * Lz)
+        )
+        Temp["g"] += np.piecewise(
+            z,
+            [z <= Delta, z >= Lz - Delta], 
+            [low_temp, high_temp, mid_temp],
+        )
+    else:
+        logger.info("Using Boundary Temp IC")
+        Temp["g"] *= z * (Lz - z) #? More noise in middle, and less at top&bottom
+        Temp["g"] += Lz - z #? T_conductive for boundary driven convection
 
     first_iter = 0
     dt = max_timestep
@@ -471,6 +444,13 @@ if not args["--test"]:
 
     with open(outpath + "run_params/runparams.json", "w") as run_file:
         run_file.write(run_params)
+
+    with open(outpath + "run_params/args.txt", "a+") as file:
+        if MPI.COMM_WORLD.rank == 0:
+            today = datetime.today().strftime("%Y-%m_%d %H:%M:%S\n\t")
+            file.write(today)
+            file.write("python3 " + " ".join(argv) + "\n")
+
 
     # ====================
     #     3D DATA FIELD
@@ -564,6 +544,12 @@ if not args["--test"]:
         name="F_tot",
         layout="g",
     )
+    scalars.add_task(
+        d3.Integrate(d3.Integrate(d3.Integrate(Temp * heat, "x"), "y"), "z")
+        / (Ly * Ly * Lz)
+        - d3.Average(d3.Average(Temp(z=Lz), "x"), "y") 
+        / (Ly * Ly), name="<gradT^2>", layout="g"
+    )
 
     # analysis = solver.evaluator.add_file_handler(
     #     outpath + "analysis",
@@ -619,22 +605,23 @@ except KeyboardInterrupt:
 except NaNFlowError:
     logger.error("Max Re is NaN or inf. Triggering end of loop")
     exit_code = -50
-except:
-    logger.error("Unknown error raised. Triggering end of loop")
+except Exception as error:
+    logger.error("Unknown error raised: {}.\n Triggering end of loop".format(error))
     exit_code = -10
 finally:
     # if not args.test:
     #     # logger.info("Merging outputs...")
     #     # combine_outputs.merge_files(outpath)
-    solver.evaluate_handlers_now(timestep)
+    solver.evaluate_handlers(dt=timestep)
     solver.log_stats()
     total_iterations = solver.iteration - first_iter
     snap_writes = (total_iterations) // snapshot_iter
+    slice_writes = (total_iterations) // slices_iter
     horiz_writes = (total_iterations) // horiz_iter
     scalar_writes = (total_iterations) // scalar_iter
     logger.info(
-        "Snaps = {}, Horiz = {}, Scalars = {}".format(
-            snap_writes, horiz_writes, scalar_writes
+        "Snaps = {}, Slices = {}, Horiz = {}, Scalars = {}".format(
+            snap_writes, slice_writes, horiz_writes, scalar_writes
         )
     )
     logger.info("Written to {}".format(outpath))
