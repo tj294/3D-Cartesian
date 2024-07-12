@@ -475,12 +475,12 @@ if not args["--test"]:
     )
     slices.add_task(Temp(x=0), name="T(x=0)", layout="g")
     slices.add_task(u(x=0), name="u(x=0)", layout="g")
-    slices.add_task(Temp(x=0.5 * Ly), name="T(x=0.5)", layout="g")
-    slices.add_task(u(x=0.5 * Ly), name="u(x=0.5)", layout="g")
-    slices.add_task(Temp(z=Ly), name="T(x=1)", layout="g")
-    slices.add_task(u(z=Ly), name="u(x=1)", layout="g")
-    slices.add_task(Temp(z=Lz / 2), name="T(z=0.5)", layout="g")
-    slices.add_task(u(z=Lz / 2), name="u(z=0.5)", layout="g")
+    slices.add_task(Temp(x=0.5 * Ly), name=f"T(x={0.5*Ly:.1f})", layout="g")
+    slices.add_task(u(x=0.5 * Ly), name=f"u(x={0.5*Ly:.1f})", layout="g")
+    slices.add_task(Temp(x=Ly), name=f"T(x={Ly:.1f})", layout="g")
+    slices.add_task(u(x=Ly), name=f"u(x={Ly:.1f})", layout="g")
+    slices.add_task(Temp(z=Lz / 2), name=f"T(z={Lz/2:.1f})", layout="g")
+    slices.add_task(u(z=Lz / 2), name=f"u(z={Lz/2})", layout="g")
 
     # ==================
     #   HORIZONTAL AVE
